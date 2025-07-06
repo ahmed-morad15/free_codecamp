@@ -1,0 +1,53 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+# Assuming your dataframe is called df and 'expenses' is the target column
+
+# Convert categorical columns using one-hot encoding or label encoding
+categorical_cols = ['sex', 'smoker', 'region']  # example categorical columns
+df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+
+# Split data into train (80%) and test (20%)
+train_dataset, test_dataset = train_test_split(df, test_size=0.2, random_state=42)
+
+# Separate labels (target variable)
+train_labels = train_dataset.pop('expenses')
+test_labels = test_dataset.pop('expenses')
+import tensorflow as tf
+from tensorflow.keras import layers
+
+# Define a simple linear regression model
+def build_model():
+    model = tf.keras.Sequential([
+        layers.Dense(64, activation='relu', input_shape=[len(train_dataset.keys())]),
+        layers.Dense(64, activation='relu'),
+        layers.Dense(1)  # single output for regression
+    ])
+
+    model.compile(optimizer='adam',
+                  loss='mean_squared_error',
+                  metrics=['mean_absolute_error', 'mean_squared_error'])
+    return model
+
+model = build_model()
+model.summary()
+EPOCHS = 100
+
+history = model.fit(
+    train_dataset, train_labels,
+    epochs=EPOCHS,
+    validation_split=0.2,
+    verbose=1
+)
+loss, mae, mse = model.evaluate(test_dataset, test_labels, verbose=2)
+print(f"Testing set Mean Abs Error: ${mae:,.2f}")
+import matplotlib.pyplot as plt
+
+test_predictions = model.predict(test_dataset).flatten()
+
+plt.scatter(test_labels, test_predictions)
+plt.xlabel('True Expenses')
+plt.ylabel('Predicted Expenses')
+plt.title('True vs Predicted Expenses')
+plt.plot([test_labels.min(), test_labels.max()], [test_labels.min(), test_labels.max()], 'r')
+plt.show()
