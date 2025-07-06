@@ -1,0 +1,25 @@
+import random
+
+def player(prev_play, opponent_history=[]):
+    # Track opponent history
+    if prev_play:
+        opponent_history.append(prev_play)
+    
+    # First move: play Rock
+    if not opponent_history:
+        return "R"
+    
+    # Count opponent move frequencies
+    counts = {"R": 0, "P": 0, "S": 0}
+    for move in opponent_history:
+        counts[move] += 1
+    
+    # Find opponent's most frequent move
+    most_common = max(counts, key=counts.get)
+    
+    # Return the move that beats opponent's most common move
+    counter = {"R": "P", "P": "S", "S": "R"}
+    return counter[most_common]
+
+#test
+play(player, quincy, 1000, verbose=True)
