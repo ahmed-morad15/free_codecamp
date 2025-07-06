@@ -1,0 +1,53 @@
+import pandas as pd
+import numpy as np
+from sklearn.neighbors import NearestNeighbors
+
+# Assume df is your original ratings DataFrame with columns: ['User-ID', 'ISBN', 'Book-Rating']
+# And books_df is the DataFrame with book info including 'Book-Title' and 'ISBN'
+
+# 1. Filter users with >= 200 ratings
+user_counts = df['User-ID'].value_counts()
+users_to_keep = user_counts[user_counts >= 200].index
+df_filtered = df[df['User-ID'].isin(users_to_keep)]
+
+# 2. Filter books with >= 100 ratings
+book_counts = df_filtered['ISBN'].value_counts()
+books_to_keep = book_counts[book_counts >= 100].index
+df_filtered = df_filtered[df_filtered['ISBN'].isin(books_to_keep)]
+
+# 3. Create book-user matrix (pivot table)
+book_user_matrix = df_filtered.pivot_table(index='ISBN', columns='User-ID', values='Book-Rating').fillna(0)
+
+# 4. Map ISBN to book titles
+isbn_to_title = books_df.set_index('ISBN')['Book-Title'].to_dict()
+title_to_isbn = {v: k for k, v in isbn_to_title.items()}
+
+# 5. Fit KNN model
+model_knn = NearestNeighbors(metric='cosine', algorithm='brute')
+model_knn.fit(book_user_matrix.values)
+
+# 6. Define recommendation function
+def get_recommends(book_title):
+    if book_title not in title_to_isbn:
+        return f"Book '{book_title}' not found in dataset."
+    
+    book_isbn = title_to_isbn[book_title]
+    
+    if book_isbn not in book_user_matrix.index:
+        return f"Book '{book_title}' does not have enough ratings for recommendations."
+    
+    book_idx = book_user_matrix.index.get_loc(book_isbn)
+    distances, indices = model_knn.kneighbors(book_user_matrix.iloc[book_idx, :].values.reshape(1, -1), n_neighbors=6)
+    
+    results = []
+    for i in range(1, len(distances[0])):  # skip the first one because it's the book itself
+        idx = indices[0][i]
+        dist = distances[0][i]
+        similar_isbn = book_user_matrix.index[idx]
+        similar_title = isbn_to_title.get(similar_isbn, "Unknown")
+        results.append([similar_title, dist])
+    
+    return [book_title, results]
+
+# Example usage:
+print(get_recommends("The Queen of the Damned (Vampire Chronicles (Paperback))"))
